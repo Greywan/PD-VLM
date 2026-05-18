@@ -1,5 +1,5 @@
 # Introduction
-VAND4.0@CVPR2026 Retail Track: Kaputt Defect Detection Challenge: off-the-shelf VLM 推理代码。
+VAND4.0@CVPR2026 Retail Track: Kaputt Defect Detection Challenge: off-the-shelf VLM inference code.
 
 # Dataset
 ## convert parquet to json format
@@ -8,56 +8,56 @@ python tool/build_dataset_json.py --data_root path/to/k2_datasets --split test -
 ```
 
 # Inference
-> 为了减少token消耗，实验过程中分两个阶段进行。例如先得到材质预测结果后，反复作为三阶段推理的输入。
+> To reduce token consumption, the experiment is conducted in two stages. For example, material prediction results are obtained first, then used as input for three-stage inference.
 
-## VLM inference
-### 材质预测
-`pipeline.yaml`中设置
+## VLM Inference
+### Material Prediction
+Set in `pipeline.yaml`:
 
 ```yaml
 data_root: "/Users/hyer/datasets/vand2026/k1/k1_val_sample500"
 skip_stage1_and_2: false
-material_prediction_only: true  # 设置为 true 只做 Stage 1 和 Stage 2
+material_prediction_only: true  # Set to true to only run Stage 1 and Stage 2
 ```
 
 ```bash
 bash run_stage1_and_stage2.sh
 ```
 
-输出目录类似：
+Output directory structure:
 ./data/kaputt/${version}/${version}/
     |-- material_predictions.json    // material prediction result
 
 
-### 根据材质预测结果执行推理
-`pipeline.yaml`中设置
+### Execute Inference Based on Material Prediction Results
+Set in `pipeline.yaml`:
 
 ```yaml
-material_prediction_only: false  # 设置为 true 只做 Stage 1 和 Stage 2
+material_prediction_only: false  # Set to true to only run Stage 1 and Stage 2
 predicted_material_file: "path/to/material_predictions.json"
-skip_stage1_and_2: true  # 设置为 true 跳过材质分类和匹配验证
+skip_stage1_and_2: true  # Set to true to skip material classification and matching verification
 ```
 
 ```bash
 bash run_stage3.sh
 ```
 
-输出目录类似：
+Output directory structure:
 ./data/kaputt/${version}/${version}/
-    |-- ${version}.jsonl    // detail inference result
-    |-- ${version}.csv      // prediction result of each capture id with score
+    |-- ${version}.jsonl    // Detailed inference results
+    |-- ${version}.csv      // Prediction results for each capture id with score
 
 
-## ensemble
-多模型融合脚本，支持两种方法：
+## Ensemble
+Multi-model fusion script supporting two methods:
 
-| 方法 | 配置值 | 说明 |
-|------|--------|------|
-| context-aware | `method: context-aware` | 利用材质缺陷率等先验特征调整 |
-| dr_adjusted_mean | `method: dr_adjusted_mean` | 缺陷率调整均值，按材质缺陷率缩放预测后取均值，无需训练 |
+| Method | Config Value | Description |
+|--------|-------------|-------------|
+| context-aware | `method: context-aware` | Material defect rate and other prior features |
+| dr_adjusted_mean | `method: dr_adjusted_mean` | Defect-rate adjusted mean, scales predictions by material defect rate ratio then averages, no training required |
 
-### 配置文件
-编辑 `configs/ensemble.yaml`：
+### Configuration
+Edit `configs/ensemble.yaml`:
 
 ```yaml
 MODEL_REGISTRY:
@@ -68,12 +68,13 @@ MODEL_REGISTRY:
     val: ./data/sample/qw36plus/v13_8_val.json
     test: ./data/sample/qw36plus/v13_8_test.json
 
-method: context-aware   # 或 dr_adjusted_mean
+method: context-aware   # or dr_adjusted_mean
 ```
 
-### 复现
-需要在 val 集 `data/sample/k1_val_sample500.json`上预测的结果 json 路径放置在 val 上, 然后将在 kaputt2 数据上预测的 json 路径放置在 test 上
-我们已经在 `data/sample/` 目录下提供了对应模型在 val 集上的预测结果，已经在 ./configs/ensembel.yaml 中配置了，需要用户自己在 kaputt2 上运行推理。请将预测结果 json 路径放置在 test 上
+### Reproduction
+Place the prediction result JSON paths on the val set `data/sample/k1_val_sample500.json` under `val`, and place the prediction JSON paths on the kaputt2 dataset under `test`.
+We have already provided the prediction results of corresponding models on the val set in the `data/sample/` directory and configured them in `./configs/ensemble.yaml`. Users need to run inference on kaputt2 themselves. Please place the prediction result JSON paths under `test`.
+
 ```yaml
   "model_1":
     val: model_1_val.json
@@ -87,28 +88,28 @@ method: context-aware   # 或 dr_adjusted_mean
 bash run_ensemble.sh
 ```
 
-### 运行
+### Usage
 
 ```bash
-# 使用默认配置 configs/ensemble.yaml
+# Use default config configs/ensemble.yaml
 python ensemble.py
 
-# 指定配置文件
+# Specify config file
 python ensemble.py -c configs/ensemble.yaml
 
-# 保存预测结果到 CSV
+# Save predictions to CSV
 python ensemble.py -c configs/ensemble.yaml -s output.csv
 
-# 测试集无 GT，仅输出预测
+# No GT on test set, output predictions only
 python ensemble.py --no_gt -s output.csv
 
-# 跳过 LOO 贡献度分析
+# Skip LOO contribution analysis
 python ensemble.py --no_loo
 
-# 去掉材质二值特征
+# Disable material binary features
 python ensemble.py --no_hierarchical
 
-# 保存 / 加载 LR 系数
+# Save / load LR coefficients
 python ensemble.py --save_coefs coefs.json
 python ensemble.py --load_coefs coefs.json -s output.csv
 ```
