@@ -1,0 +1,136 @@
+# Three-stage defect detection analysis system - Base prompt configuration
+# Stage 1: Material Code Selector
+# Stage 2: Prompt Matcher
+# Stage 3: Executor - uses material_prompts.yaml
+
+# Available material code list
+MATERIAL_CODES:
+  - paper          # 纸张
+  - cardboard      # 硬纸板/纸箱/硬纸盒包装
+  - book           # 书籍（包含纸质书、塑封书、精装书等所有书籍类型）
+  - plastic_loose_bag        # 塑料松散袋
+  - plastic_tight_wrap       # 塑料紧包装/塑封
+  - plastic_bubble_wrap      # 塑料气泡膜
+  - plastic_hard             # 硬塑料
+  - other          # 其他
+
+# Stage 1: Material Code Selector
+# Input: query image
+# Output: material_code
+stage1_selector:
+  system_prompt: |
+    你是一名专业的物流和零售商品包装材料分类专家。你的任务是根据图片内容识别商品的包装材质类型。
+
+  user_prompt: |
+    请仔细观察以下图片，识别商品的包装材质类型。
+
+    ## 可选的材质类型：
+    1. **paper** - 纸张：普通纸张、打印纸、薄纸制品，无硬挺包装
+    2. **cardboard** - 硬纸板/纸箱/硬纸盒包装：瓦楞纸箱、硬纸盒、纸板包装
+    3. **book** - 书籍：所有类型的书籍，包括平装书、塑封书、精装书等
+    4. **plastic_loose_bag** - 塑料松散袋：PE袋、普通塑料袋、未密封的塑料袋
+    5. **plastic_tight_wrap** - 塑料紧包装/塑封：热收缩膜、紧密包裹的塑料膜
+    6. **plastic_bubble_wrap** - 塑料气泡膜：气泡袋、气泡膜包装
+    7. **plastic_hard** - 硬塑料：塑料瓶、塑料盒、硬塑料容器
+    8. **other** - 其他：无法归入以上类别的材质
+
+    ## 分类指导原则：
+    - 首先判断是否为书籍类商品，如果是，进一步判断是否有塑封
+    - 观察包装是否硬挺：硬挺的可能是 cardboard 或 plastic_hard
+    - 观察塑料包装类型：松散的是 plastic_loose_bag（包括plastic pouch、PE袋等软质袋），紧贴的是 plastic_tight_wrap，有气泡的是 plastic_bubble_wrap
+    - 不确定时选择最接近的类别，如果都不符合则选择 "other"
+
+    ## 材质归类说明：
+    - plastic_pouch、PE袋、软质塑料袋 → 统一归类为 plastic_loose_bag
+
+    ## 输出格式（严格JSON）：
+    {{
+      "material_code": "上述10种材质代码之一",
+      "confidence": "0-1之间的浮点数，表示分类置信度",
+      "reasoning": "简要说明分类理由，描述观察到的特征"
+    }}
+
+    只输出JSON，不要输出其他内容。
+
+# Stage 2: Prompt Matcher
+# Input: query image + selected material_code
+# Output: is_match (whether matched), fallback_code (fallback material if not matched)
+stage2_matcher:
+  system_prompt: |
+    你是一名专业的商品材质匹配度评估专家。你的任务是评估给定的材质分析提示词是否适合当前图片。
+
+  user_prompt: |
+    已初步判断该商品材质为：{material_code}
+
+    ## 该材质的典型特征：
+    {material_description}
+
+    请评估上述材质分类是否准确匹配当前图片中的商品。
+
+    ## 评估维度：
+    1. **材质外观一致性**：图片中的商品是否符合该材质的典型视觉特征？
+    2. **包装类型匹配度**：包装形态（硬盒/软袋/书籍等）是否与该材质匹配？
+    3. **缺陷分析适用性**：使用该材质的缺陷分析提示词能否有效识别该商品的问题？
+
+    ## 输出格式（严格JSON）：
+    {{
+      "is_match": true/false,
+      "match_score": "0-1之间的浮点数，匹配度评分",
+      "reasoning": "详细说明匹配或不匹配的理由",
+      "fallback_code": "如果不匹配，建议使用哪个材质代码（从可用材质中选择最接近的）"
+    }}
+
+    判断标准：
+    - is_match = true：当 match_score >= 0.7 时，认为匹配成功
+    - is_match = false：当 match_score < 0.7 时，需要使用 fallback_code
+
+    只输出JSON，不要输出其他内容。
+
+# Stage 3: Executor - Output format prompt
+# This part will be appended to the analysis prompt corresponding to material_code
+stage3_executor:
+  output_format_prompt: |
+
+    ## 输出要求（严格遵循上述判定规则）
+
+    **重要提示**：
+    1. 【领域知识】和【特别说明】中明确排除的情况（如气泡膜/塑料袋的自然褶皱、标签差异等）**不属于缺陷**，应判定为 defect = 0.0
+    2. 对于确实属于缺陷的情况（未被特别说明排除的），必须严格遵守：
+       - 只要发现任何缺陷迹象（轻微磨损、划痕、污渍、变形、折痕等），defect必须≥0.6
+       - 不得给出0.1-0.5之间的分数
+       - 只有完全无缺陷时才能输出 defect = 0.0
+
+    以JSON格式输出分析结果：
+    {{
+      "defect": "0-1之间的浮点数，必须严格遵循上述判定规则",
+      "explain": "详细说明：1)发现的异常是否属于缺陷（参考特别说明）；2)应用的判定规则及得分依据"
+    }}
+
+    判定规则摘要：
+    - defect = 0.0：完全无缺陷，或被【特别说明】排除的情况（如褶皱、标签差异等）
+    - defect ≥ 0.6：发现任何未被排除的轻微缺陷（磨损、划痕、污渍、变形等）
+    - defect ≥ 0.8：明显缺陷
+    - defect ≥ 1.0：完全损坏
+
+    只输出JSON，不要输出其他内容。
+
+# Material description mapping (for Stage 2)
+material_descriptions:
+  paper: "普通纸张、薄纸制品，通常较软，无硬挺结构"
+  cardboard: "瓦楞纸箱、硬纸板盒，结构硬挺，常见物流包装"
+  book: "所有类型的书籍，包括平装书、塑封书、精装书等"
+  plastic_loose_bag: "松散塑料袋，未密封，可能有开口，包括plastic_pouch等软质袋"
+  plastic_tight_wrap: "紧密塑封，热收缩膜，紧贴商品表面"
+  plastic_bubble_wrap: "气泡膜包装，表面有气泡结构"
+  plastic_hard: "硬塑料瓶、塑料盒等硬质塑料容器"
+  other: "其他无法归类的材质"
+
+# Material code mapping (for normalizing Stage 1 output)
+# Maps non-standard material codes that the model may output to standard codes
+material_code_mapping:
+  plastic_pouch: plastic_loose_bag    # 塑料 pouch 袋归类为松散袋
+  pe_bag: plastic_loose_bag          # PE袋归类为松散袋
+  soft_plastic_bag: plastic_loose_bag # 软塑料袋归类为松散袋
+  book_paper: book
+  book_plastic_tight_wrap: book
+  book_other: book

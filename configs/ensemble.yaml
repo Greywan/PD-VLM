@@ -1,0 +1,15 @@
+MODEL_REGISTRY:
+  "gemini":
+    val: ./data/sample/gemini/v17_gemini3-flash-preview_k1_val500.json
+    test: ./data/sample/gemini/v17_gemini3-flash-preview_k1_test500.json
+  "qw36plus":
+    val: ./data/sample/qw36plus/v13_8_val.json
+    test: ./data/sample/qw36plus/v13_8_test.json
+  "glm":
+    val: ./data/sample/glm/val_glm46v_ref_pm2.json
+    test: ./data/sample/glm/testsa500_glm46v_pm2_v2.json
+  "qwen36p27b_p7t05":
+    val: ./data/sample/qwen36plus_p7t05/val_qw36p27b_p7t05.json
+    test: ./data/sample/qwen36plus_p7t05/testsa500_qw36p27b_p7_t05_real.json
+
+method: dr_adjusted_mean

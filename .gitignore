@@ -42,7 +42,7 @@ dmypy.json
 .ipynb_checkpoints
 
 # VAND Challenge — data, outputs, artifacts
-data/
+# data/
 outputs/
 submissions/
 weights/

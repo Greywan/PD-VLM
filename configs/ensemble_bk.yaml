@@ -1,0 +1,15 @@
+MODEL_REGISTRY: 
+  "gemini_v17":
+    val: ./data/kaputt/04_results/v17_gemini3-flash-preview_k1_val500/v17_gemini3-flash-preview_k1_val500.json
+    test: ./data/kaputt/04_results/v17_gemini3-flash-preview_k1_test500/v17_gemini3-flash-preview_k1_test500.json
+  "qw36plus_v13_8":
+    val: ./data/kaputt/04_results/val_qw36plus_v13_8_k1_val/v13_8.json
+    test: ./data/kaputt/04_results/testsa500_qw36plus_v13_8/v13_8.json
+  "glm_pm2v2":
+    val: ./data/kaputt/04_results/val_glm46v_ref_pm2/val_glm46v_ref_pm2.json
+    test: ./data/kaputt/04_results/testsa500_glm46v_pm2_v2/testsa500_glm46v_pm2_v2.json
+  "p7_t05_real":
+    val: ./data/kaputt/04_results/val_qw36p27b_p7t05_real/val_qw36p27b_p7t05.json
+    test: ./data/kaputt/04_results/testsa500_qw36p27b_p7_t05_real/testsa500_qw36p27b_p7_t05_real.json
+
+method: context-aware

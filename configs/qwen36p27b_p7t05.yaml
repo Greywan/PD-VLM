@@ -1,0 +1,90 @@
+# P7: 组合增强版 prompt (temperature=0.5)
+# 融合 CoT 推理 + 领域知识 + 数量计数 + 高召回倾向
+# Self-consistency experiment: higher temperature for diversity
+
+DASHSCOPE_API_KEY: null
+DASHSCOPE_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+data_root: "./data/kaputt/test_sample500"
+predictor_module: "src.functions.vand.defect_judge"
+predictor_func: "vand_defect_predict_ref"
+
+fields_map:
+  pred: "pred"
+  explain: "explain"
+  query_img_name: "query_img_name"
+  reference_images: "reference_images"
+  img_path: "img_path"
+  gt_major_defect: "gt_major_defect"
+  gt_defect_types: "gt_defect_types"
+  gt_is_defect: "gt_is_defect"
+  raw_response: "raw_response"
+  timestamp: "timestamp"
+  event: "event"
+  
+token_fields:
+  cost_time: "cost_time"
+  prompt_tokens: "prompt_tokens"
+  completion_tokens: "completion_tokens"
+
+track_tokens: true
+idx_field: "idx"
+max_workers: 4
+item_timeout: 20
+temperature: 0.5
+
+functions:
+  description:
+    output_format: json_object
+    model: qwen3.6-27b
+    refer_prompt_1: |
+      这是【查询图片】（待检物品）：
+    refer_prompt_2: |
+      \n以下是【参考图片】（正常物品样本）：
+    user_prompt: |
+      # 角色
+      你是一名专业的物流和零售商品质量检验专家，精通各类包装材料的缺陷识别。你的核心原则：宁可多检不可漏检。
+
+      ## 分析步骤（请按此顺序思考）
+
+      Step 1 - 识别商品与材料:
+      识别商品类型和包装材料，回忆该类材料的常见缺陷模式：
+      - 纸箱：角落压碎、胶带密封、箱体变形
+      - 塑料容器：裂缝、瓶口密封、挤压变形
+      - 书籍/杂志：角落折角、封面撕裂、书脊完好
+      - 电子产品：包装完整、防静电密封、缓冲材料
+      - 食品包装：溢出、凹痕、封口破损、漏气
+      - 收缩膜包装：膜撕裂、密封、热缩膜完整
+
+      Step 2 - 包装完整性检查（最关键）:
+      逐一检查：
+      - 盖子是否关闭？翘起/打开/未闭合 → 结构解体
+      - 塑料膜/收缩膜是否完整包裹？孔洞/破损/松散 → 穿孔或结构解体
+      - 内容物是否在包装内？掉落/挤出 → 结构解体
+
+      Step 3 - 数量检查（多件装必做）:
+      - 识别包装规格（4x3=12罐等）
+      - 逐个清点可见商品
+      - 明显空缺位置视为缺失，不要假设被遮挡
+      - 实际 < 预期 → 缺失部件
+
+      Step 4 - 结构与表面检查:
+      - 变形：压碎、弯曲、凹陷、翘曲
+      - 穿孔：孔洞、刺穿
+      - 泄漏：液体/粉末溢出
+      - 表面：划痕、污渍、撕裂、褪色
+
+      Step 5 - 与参考图对比:
+      将查询图与参考图对比，识别所有视觉差异：
+      - 形状差异、表面差异、结构差异
+      - 参考图展示的是正常状态，任何偏离都可能是缺陷
+
+      Step 6 - 输出结果:
+      不确定时倾向于判为有缺陷（漏检比误报更严重）。
+
+      以JSON格式输出：
+      {{
+          "defect": 0-1的浮点数（不确定时倾向较高值）,
+          "explain": "简要总结判断理由，注明发现的异常及位置"
+      }}
+
+      只输出JSON，不要输出其他内容。

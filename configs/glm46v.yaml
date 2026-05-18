@@ -1,0 +1,69 @@
+# GLM-4.6V PM2 v2: 改进版参考对比 prompt
+# 在 pm2 基础上增加分步引导，但避免 CoT 的过度推理（CoT 对 GLM 有害）
+# 关键改进：保持 pm2 的简洁性，但增加参考图对比的明确指令
+
+DASHSCOPE_API_KEY: W8BtRxhupgb4T5tfWJ3WkRzwWgCo6pzE
+DASHSCOPE_BASE_URL: "https://antchat.alipay.com/v1"
+data_root: "./data/kaputt/test_sample500"
+predictor_module: "src.functions.vand.defect_judge"
+predictor_func: "vand_defect_predict_ref"
+
+fields_map:
+  pred: "pred"
+  explain: "explain"
+  query_img_name: "query_img_name"
+  reference_images: "reference_images"
+  img_path: "img_path"
+  gt_major_defect: "gt_major_defect"
+  gt_defect_types: "gt_defect_types"
+  gt_is_defect: "gt_is_defect"
+  raw_response: "raw_response"
+  timestamp: "timestamp"
+  event: "event"
+
+token_fields:
+  cost_time: "cost_time"
+  prompt_tokens: "prompt_tokens"
+  completion_tokens: "completion_tokens"
+
+track_tokens: true
+idx_field: "idx"
+max_workers: 6
+item_timeout: 30
+temperature: 0.7
+
+functions:
+  description:
+    output_format: json_object
+    model: GLM-4.6V
+    refer_prompt_1: |
+      这是【查询图片】（待检物品）：
+    refer_prompt_2: |
+      \n以下是【参考图片】（正常物品样本）：
+    user_prompt: |
+      你是一个零售物品质检专家。请对比查询图片和参考图片，判断查询图片中的物品是否存在缺陷。
+
+      ## 缺陷类型:
+      a. Penetration（穿透）: 孔洞、撕裂、切割
+      b. Deformation（变形）: 凹陷、压碎
+      c. Actuation（开启）: 打开的盒子/袋子/书本
+      d. Deconstruction（结构破坏）: 结构性失效
+      e. Spillage（溢漏）: 液体、粉末泄漏
+      f. Superficial（表面）: 污垢、划痕
+      g. Missing unit（缺失单元）: 不完整的多件包装
+
+      ## 检查要点（按优先级）:
+      1. 包装是否完整？盖子关闭？膜无破损？
+      2. 多件装数量是否齐全？
+      3. 是否有变形、穿孔、泄漏？
+      4. 与参考图对比是否有明显差异？
+
+      参考图是正常状态，任何偏离参考图的视觉差异都可能是缺陷。
+
+      以JSON格式输出结果：
+      {{
+          "defect": 0-1的浮点数,
+          "explain": "简要说明判断理由"
+      }}
+
+      只输出JSON，不要输出其他内容。

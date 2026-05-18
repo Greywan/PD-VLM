@@ -1,0 +1,60 @@
+# Three-stage defect detection analysis Pipeline configuration
+# Uses vand_defect_predict_pipeline function
+# Stage 1: Material classification -> Stage 2: Match validation -> Stage 3: Defect analysis
+
+DASHSCOPE_API_KEY: null
+DASHSCOPE_BASE_URL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+data_root: "/Users/hyer/datasets/vand2026/k1/k1_val_sample500"
+predictor_module: "src.functions.vand.defect_judge"
+predictor_func: "vand_defect_predict_pipeline"
+
+# Prompt file path configuration
+base_prompt_path: "configs/base_prompt.yaml"
+material_prompts_path: "configs/material_prompts.yaml"
+
+# Material prediction mode configuration
+material_prediction_only: false  # Set to true to only run Stage 1 and Stage 2
+
+# Optional: Skip Stage 1 and Stage 2, read material directly from input data
+# If skip_stage1_and_2: true is set, material_source_field must be provided
+predicted_material_file: "data/kaputt/material_cls/material_predictions.json"
+skip_stage1_and_2: true  # Set to true to skip material classification and match validation
+material_source_field: "item_material"  # Which field in input data to read material code from
+
+# Optional: Only analyze samples of specific material types
+# If set, only samples with material codes in this list will be analyzed
+target_materials: []  # e.g.: ["cardboard", "plastic_loose_bag"] only analyze these two materials
+
+fields_map:
+  pred: "pred"
+  explain: "explain"
+  query_img_name: "query_img_name"
+  reference_images: "reference_images"
+  img_path: "img_path"
+  gt_major_defect: "gt_major_defect"
+  gt_defect_types: "gt_defect_types"
+  gt_is_defect: "gt_is_defect"
+  raw_response: "raw_response"
+  timestamp: "timestamp"
+  pipeline_info: "pipeline_info"
+  material_prediction: "material_prediction"  # Material prediction result
+
+token_fields:
+  cost_time: "cost_time"
+  prompt_tokens: "prompt_tokens"
+  completion_tokens: "completion_tokens"
+
+track_tokens: true
+idx_field: "idx"
+max_workers: 8  # Reduce concurrency to avoid API limits
+item_timeout: 60  # Increase timeout
+temperature: 0.01
+
+functions:
+  description:
+    output_format: json_object
+    model: qwen3.6-plus
+    # Three-stage pipeline doesn't need prompt defined here, prompts are loaded from yaml files
+    # Stage 1: Uses stage1_selector from base_prompt.yaml
+    # Stage 2: Uses stage2_matcher from base_prompt.yaml
+    # Stage 3: Uses corresponding material from material_prompts.yaml + output_format_prompt from base_prompt.yaml
