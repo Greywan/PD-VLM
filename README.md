@@ -48,6 +48,12 @@ Output directory structure:
     |-- ${version}.csv      // Prediction results for each capture id with score
 
 
+### VLM Single-Stage Prediction Result Assistance
+We used two models, qwen3.6-27b and GLM 4.6-V, for single-stage prediction
+```bash
+bash run_single_stage_vlm.sh
+```
+
 ## Ensemble
 Multi-model fusion script supporting two methods:
 

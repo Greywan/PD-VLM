@@ -9,7 +9,7 @@ MODEL_REGISTRY:
     val: ./data/sample/glm/val_glm46v_ref_pm2.json
     test: ./data/sample/glm/testsa500_glm46v_pm2_v2.json
   "qwen36p27b_p7t05":
-    val: ./data/sample/qwen36plus_p7t05/val_qw36p27b_p7t05.json
-    test: ./data/sample/qwen36plus_p7t05/testsa500_qw36p27b_p7_t05_real.json
+    val: ./data/sample/qwen36p27b_p7t05/val_qw36p27b_p7t05.json
+    test: ./data/sample/qwen36p27b_p7t05/testsa500_qw36p27b_p7_t05_real.json
 
 method: dr_adjusted_mean

@@ -42,6 +42,12 @@ skip_stage1_and_2: true  # 设置为 true 跳过材质分类和匹配验证
 bash run_stage3.sh
 ```
 
+### VLM 单阶段预测结果辅助
+我们使用了 qwen3.6-27b 和 GLM 4.6-V 两个模型进行单阶段预测
+```bash
+bash run_single_stage_vlm.sh
+```
+
 输出目录类似：
 ./data/kaputt/${version}/${version}/
     |-- ${version}.jsonl    // detail inference result
